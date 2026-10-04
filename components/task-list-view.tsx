@@ -2,9 +2,10 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { Search, LayoutGrid, List, Sparkles, Plus, X } from "lucide-react"
+import { Search, LayoutGrid, List, Sparkles, Plus, X, Columns3 } from "lucide-react"
 import { Task } from "@/lib/db"
 import { TaskCard } from "@/components/task-card"
+import { TaskKanbanBoard } from "@/components/task-kanban-board"
 import { Button } from "@/components/ui/button"
 import { quickCreateTask } from "@/lib/action"
 import { useRouter } from "next/navigation"
@@ -19,11 +20,11 @@ export function TaskListView({ initialTasks }: TaskListViewProps) {
   const [selectedStatus, setSelectedStatus] = React.useState<string>("all")
   const [selectedPriority, setSelectedPriority] = React.useState<string>("all")
   const [selectedCategory, setSelectedCategory] = React.useState<string>("all")
-  const [viewMode, setViewMode] = React.useState<"grid" | "list">("grid")
+  const [viewMode, setViewMode] = React.useState<"kanban" | "grid" | "list">("kanban")
   const [quickTitle, setQuickTitle] = React.useState("")
   const [isQuickAdding, setIsQuickAdding] = React.useState(false)
 
-  // Filter tasks
+  // Filter tasks for grid & list views
   const filteredTasks = React.useMemo(() => {
     return initialTasks.filter((t) => {
       // Search
@@ -137,18 +138,20 @@ export function TaskListView({ initialTasks }: TaskListViewProps) {
             <option value="ai_suggested">AI Drafts</option>
           </select>
 
-          {/* Priority select */}
-          <select
-            value={selectedPriority}
-            onChange={(e) => setSelectedPriority(e.target.value)}
-            className="rounded-lg border border-border/50 bg-card/60 px-2.5 py-1.5 text-xs text-foreground backdrop-blur-sm focus:outline-none focus:border-cyan-500/40 cursor-pointer"
-          >
-            <option value="all">All Priorities</option>
-            <option value="urgent">Urgent</option>
-            <option value="high">High</option>
-            <option value="medium">Medium</option>
-            <option value="low">Low</option>
-          </select>
+          {/* Priority select (hidden in Kanban view since columns are by priority) */}
+          {viewMode !== "kanban" && (
+            <select
+              value={selectedPriority}
+              onChange={(e) => setSelectedPriority(e.target.value)}
+              className="rounded-lg border border-border/50 bg-card/60 px-2.5 py-1.5 text-xs text-foreground backdrop-blur-sm focus:outline-none focus:border-cyan-500/40 cursor-pointer"
+            >
+              <option value="all">All Priorities</option>
+              <option value="urgent">Urgent</option>
+              <option value="high">High</option>
+              <option value="medium">Medium</option>
+              <option value="low">Low</option>
+            </select>
+          )}
 
           {/* Category select */}
           <select
@@ -165,15 +168,28 @@ export function TaskListView({ initialTasks }: TaskListViewProps) {
             <option value="Personal">Personal</option>
           </select>
 
-          {/* View toggle */}
+          {/* View toggle (Kanban, Grid, List) */}
           <div className="flex items-center rounded-lg border border-border/50 bg-card/60 p-0.5 backdrop-blur-sm">
+            <button
+              type="button"
+              onClick={() => setViewMode("kanban")}
+              className={`flex items-center gap-1.5 rounded-md px-2 py-1 text-xs transition-colors cursor-pointer ${
+                viewMode === "kanban"
+                  ? "bg-accent text-cyan-400 font-medium"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+              title="Kanban Board View (Priority Drag & Drop)"
+            >
+              <Columns3 className="size-3.5" />
+              <span className="hidden sm:inline">Kanban</span>
+            </button>
             <button
               type="button"
               onClick={() => setViewMode("grid")}
               className={`rounded-md p-1.5 transition-colors cursor-pointer ${
                 viewMode === "grid" ? "bg-accent text-cyan-400" : "text-muted-foreground hover:text-foreground"
               }`}
-              title="Grid view"
+              title="Grid Matrix View"
             >
               <LayoutGrid className="size-3.5" />
             </button>
@@ -183,7 +199,7 @@ export function TaskListView({ initialTasks }: TaskListViewProps) {
               className={`rounded-md p-1.5 transition-colors cursor-pointer ${
                 viewMode === "list" ? "bg-accent text-cyan-400" : "text-muted-foreground hover:text-foreground"
               }`}
-              title="List view"
+              title="Compact List View"
             >
               <List className="size-3.5" />
             </button>
@@ -206,13 +222,22 @@ export function TaskListView({ initialTasks }: TaskListViewProps) {
       {/* Counter row */}
       <div className="flex items-center justify-between text-xs font-mono text-muted-foreground px-1">
         <span>
-          Showing {filteredTasks.length} of {initialTasks.length} tasks
+          Showing {viewMode === "kanban" ? initialTasks.length : filteredTasks.length} of {initialTasks.length} workflows
         </span>
-        {hasActiveFilters && <span className="text-cyan-400">Filters active</span>}
+        {viewMode === "kanban" && (
+          <span className="text-cyan-400 font-medium">Kanban Priority Matrix Active</span>
+        )}
       </div>
 
-      {/* Task Matrix Container */}
-      {filteredTasks.length === 0 ? (
+      {/* View Mode Switching: Kanban vs Grid vs List */}
+      {viewMode === "kanban" ? (
+        <TaskKanbanBoard
+          initialTasks={initialTasks}
+          searchFilter={searchQuery}
+          statusFilter={selectedStatus}
+          categoryFilter={selectedCategory}
+        />
+      ) : filteredTasks.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border/60 bg-card/30 p-12 text-center backdrop-blur-md">
           <div className="flex size-12 items-center justify-center rounded-2xl bg-cyan-500/10 text-cyan-400 mb-4 border border-cyan-500/20">
             <Sparkles className="size-6" />

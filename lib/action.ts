@@ -75,6 +75,15 @@ export const updateTaskStatusAction = async (id: string, status: TaskStatus) => 
   return { success: !!updated, updated }
 }
 
+export const updateTaskPriorityAction = async (id: string, priority: TaskPriority) => {
+  if (!id) return { success: false }
+  const updated = await updateTask(id, { priority })
+  revalidatePath("/")
+  revalidatePath("/tasks")
+  revalidatePath(`/tasks/${id}`)
+  return { success: !!updated, updated }
+}
+
 // AI Copilot task synthesizer: generates intelligent multi-tier tasks from a single prompt
 export const synthesizeAiTasksAction = async (prompt: string) => {
   const cleanPrompt = prompt.trim()

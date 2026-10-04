@@ -20,6 +20,8 @@ import { toggleTaskAction, deleteTaskAction } from "@/lib/action"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
+import { PermissionModal } from "@/components/permission-modal"
+
 interface TaskCardProps {
   task: Task
   compact?: boolean
@@ -68,6 +70,7 @@ export function TaskCard({ task, compact = false }: TaskCardProps) {
   const router = useRouter()
   const [isPending, startTransition] = React.useTransition()
   const [showInsight, setShowInsight] = React.useState(false)
+  const [deleteModalOpen, setDeleteModalOpen] = React.useState(false)
 
   const isCompleted = task.status === "completed"
   const priorityInfo = priorityStyles[task.priority] || priorityStyles.medium
@@ -86,15 +89,18 @@ export function TaskCard({ task, compact = false }: TaskCardProps) {
     })
   }
 
-  const handleDelete = (e: React.MouseEvent) => {
+  const handleDeleteClick = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    if (confirm(`Delete "${task.title}"?`)) {
-      startTransition(async () => {
-        await deleteTaskAction(task.id)
-        router.refresh()
-      })
-    }
+    setDeleteModalOpen(true)
+  }
+
+  const handleConfirmDelete = () => {
+    startTransition(async () => {
+      await deleteTaskAction(task.id)
+      setDeleteModalOpen(false)
+      router.refresh()
+    })
   }
 
   return (
@@ -231,7 +237,7 @@ export function TaskCard({ task, compact = false }: TaskCardProps) {
           <Button
             variant="ghost"
             size="icon-xs"
-            onClick={handleDelete}
+            onClick={handleDeleteClick}
             className="size-6 text-muted-foreground hover:text-rose-400 hover:bg-rose-500/10 rounded-md cursor-pointer"
             aria-label="Delete task"
           >
@@ -239,6 +245,20 @@ export function TaskCard({ task, compact = false }: TaskCardProps) {
           </Button>
         </div>
       </div>
+
+      {/* Security Clearance Permission Modal */}
+      <PermissionModal
+        open={deleteModalOpen}
+        onOpenChange={setDeleteModalOpen}
+        title="Authorize Workflow Decommission"
+        description="Are you sure you want to permanently decommission this workflow from the active matrix? This action will purge all associated telemetry and subtasks."
+        itemName={task.title}
+        confirmText="Confirm & Delete"
+        cancelText="Abort"
+        onConfirm={handleConfirmDelete}
+        isLoading={isPending}
+        variant="destructive"
+      />
     </div>
   )
 }
